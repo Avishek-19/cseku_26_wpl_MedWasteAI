@@ -1,0 +1,8 @@
+{
+  "name": "fast-glob",
+  "version": "3.3.1",
+  "private": true,
+  "main": "index.cjs",
+  "description": "Node directory glob adapter for Next.js ESLint root lookup",
+  "engines": { "node": ">=22.0.0" }
+}

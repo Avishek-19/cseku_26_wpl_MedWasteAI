@@ -1,0 +1,27 @@
+FROM node:22-bookworm-slim AS web
+WORKDIR /build
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY frontend/package.json frontend/package-lock.json ./
+COPY frontend/tooling ./tooling
+RUN npm ci
+COPY frontend/ ./
+# Never use a developer's local environment in the cloud build.
+RUN rm -f .env .env.local .env.production .env.production.local .env.development .env.development.local
+ENV NEXT_PUBLIC_API_URL="" NEXT_PUBLIC_WS_URL="" BACKEND_INTERNAL_URL=http://127.0.0.1:8000
+RUN npm run build
+
+FROM node:22-bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-venv nginx ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
+WORKDIR /app/backend
+COPY backend/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+COPY backend/ ./
+RUN rm -f .env && rm -rf .runtime storage
+COPY --from=web /build/.next/standalone /app/web/
+COPY --from=web /build/.next/static /app/web/.next/static
+COPY --from=web /build/public /app/web/public
+COPY deploy /app/deploy
+EXPOSE 10000
+CMD ["python", "/app/deploy/launch.py"]

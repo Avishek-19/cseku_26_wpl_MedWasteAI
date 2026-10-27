@@ -1,0 +1,23 @@
+// Run after npm install: node tests/gps-trust.cjs (no browser required).
+const assert = require('node:assert/strict');
+const ts = require('typescript');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const path = require('node:path');
+const source = fs.readFileSync(path.join(__dirname, '../lib/gps-trust.ts'), 'utf8');
+const compiled = ts.transpileModule(source, {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
+const moduleObject = {exports:{}};
+vm.runInNewContext(compiled,{exports:moduleObject.exports,module:moduleObject});
+const {gpsTrust,gpsTrustLabel} = moduleObject.exports;
+const now = Date.parse('2026-10-10T09:00:00Z');
+const location = (source, verified, time = '2026-10-10T08:59:55Z', anomaly=null) => ({source,provenance_verified:verified,timestamp:time,anomaly_type:anomaly});
+assert.equal(gpsTrust(null,now,30), 'no-signal');
+assert.equal(gpsTrust(location('gps_device',true),now,30), 'verified');
+assert.equal(gpsTrust(location('gps_device',false),now,30), 'unverified');
+assert.equal(gpsTrust(location('mobile_app',false),now,30), 'unverified');
+assert.equal(gpsTrust(location('simulator',false),now,30), 'simulator');
+assert.equal(gpsTrust(location('gps_device',true,undefined,'impossible_speed'),now,30), 'anomalous');
+assert.equal(gpsTrust(location('gps_device',true,'2026-10-10T08:58:00Z'),now,30), 'stale');
+assert.equal(gpsTrust(location('gps_device',true,'invalid-date'),now,30), 'stale');
+assert.equal(gpsTrustLabel['verified'], 'VERIFIED GPS');
+console.log('GPS trust classification: 9 checks passed');

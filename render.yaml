@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: medwaste-public
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile.render
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    autoDeployTrigger: "off"
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: AUTH_COOKIE_SECURE
+        value: "true"
+      - key: LOCAL_AI_ENABLED
+        value: "false"
+      - key: PAYMENT_MODE
+        value: disabled
+      - key: TRACKING_MODE
+        value: real
+      - key: WORKFLOW_INTERVAL
+        value: "60"
